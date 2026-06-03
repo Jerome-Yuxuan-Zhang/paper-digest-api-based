@@ -15,6 +15,7 @@ def test_load_settings_accepts_generic_api_key(monkeypatch, tmp_path) -> None:
 
 def test_default_text_model_is_long_document_friendly(monkeypatch, tmp_path) -> None:
     monkeypatch.delenv("QWEN_TEXT_MODEL", raising=False)
+    monkeypatch.delenv("TEXT_MODEL", raising=False)
 
     settings = load_settings(tmp_path / "missing.env")
 

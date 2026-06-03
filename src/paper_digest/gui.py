@@ -155,7 +155,7 @@ class PaperDigestGui(tk.Tk):
             16,
             "文本模型",
             self.text_model,
-            ["qwen3.5-plus", "qwen-plus-latest", "qwen-max-latest", "qwen-turbo-latest", "qwen-long"],
+            ["qwen3.6-plus", "qwen3.5-plus", "qwen-plus-latest", "qwen-max-latest", "qwen-turbo-latest"],
         )
         self._combo_row(parent, 17, "OCR 模型", self.ocr_model, ["qwen-vl-ocr-latest"])
         ttk.Button(parent, text="保存 .env 配置", command=self._save_env).grid(row=18, column=0, columnspan=3, sticky="ew", pady=(10, 0))

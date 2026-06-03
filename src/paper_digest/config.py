@@ -6,7 +6,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-DEFAULT_TEXT_MODEL = "qwen3.5-plus"
+DEFAULT_TEXT_MODEL = "qwen3.6-plus"
 DEFAULT_OCR_MODEL = "qwen-vl-ocr-latest"
 DEFAULT_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 

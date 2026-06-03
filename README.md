@@ -11,13 +11,6 @@
 
 项目也保留论文卡片流程：PDF 解析、文献卡片、Excel 文献矩阵、证据库和综述提示词。
 
-## 开源前提醒
-
-- 不要提交 `.env`、API Key、个人 PDF、生成报告、日志或 exe 构建产物。
-- 默认 `.gitignore` 已忽略 `input_pdfs/`、`outputs/`、`logs/`、`build/`、`dist/`、`.env` 和 `*.exe`。
-- 程序会把被分析文本发送到你配置的 API。请只处理你有权发送给第三方模型服务的文件。
-- 当前项目适合先作为 `v0.1.0-alpha` 使用；超长文件处理仍以截断/跳过为主，不是完整长文 map-reduce。
-
 ## 安装
 
 需要 Python 3.11 或更高版本。
@@ -46,7 +39,7 @@ source .venv/bin/activate
 ```env
 API_KEY=你的key
 API_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-TEXT_MODEL=qwen3.5-plus
+TEXT_MODEL=qwen3.6-plus
 OCR_MODEL=qwen-vl-ocr-latest
 ```
 
@@ -57,16 +50,41 @@ DASHSCOPE_API_KEY=你的key
 QWEN_API_KEY=你的key
 OPENAI_API_KEY=你的key
 QWEN_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-QWEN_TEXT_MODEL=qwen3.5-plus
+QWEN_TEXT_MODEL=qwen3.6-plus
 QWEN_OCR_MODEL=qwen-vl-ocr-latest
 ```
 
 不要把 API Key 写死进代码。模型名称和 `base_url` 会从系统环境变量、`.env` 或 GUI 当前输入读取。
 
-默认模型只是示例：
+## 推荐使用 Qwen API
 
-- `TEXT_MODEL=qwen3.5-plus`：适合资料夹报告、长文档分析和结构化 JSON 抽取。
-- `OCR_MODEL=qwen-vl-ocr-latest`：适合 OCR。
+本项目默认推荐使用 Qwen / DashScope，因为它提供 OpenAI-compatible 接口、中文能力强，并且有适合长文档分析的模型。
+
+推荐模型：
+
+- `qwen3.6-plus`：推荐作为首选文本模型；如果你的账号或区域暂未开放该模型，可以改用 `qwen3.5-plus` 或 `qwen-plus-latest`。
+- `qwen-vl-ocr-latest`：推荐作为 OCR 模型。
+
+注册和配置步骤：
+
+1. 打开阿里云百炼 / DashScope 控制台。
+2. 登录或注册阿里云账号。
+3. 开通模型服务，并确认账号有可用额度或计费方式。
+4. 在 API Key 管理页面创建 API Key。
+5. 把 API Key 写入系统环境变量，或复制 `.env.example` 为 `.env` 后填写。
+6. 保持 `API_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1`。
+7. 在 GUI 中点击“重新读取系统环境变量”，或重新启动程序。
+
+示例 `.env`：
+
+```env
+API_KEY=你的DashScope_API_Key
+API_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+TEXT_MODEL=qwen3.6-plus
+OCR_MODEL=qwen-vl-ocr-latest
+```
+
+如果你使用海外站点或国际版 Qwen Cloud，请按照对应控制台给出的 OpenAI-compatible endpoint 修改 `API_BASE_URL`。
 
 你可以换成任何兼容 OpenAI Chat Completions API 的长上下文模型。
 
@@ -227,4 +245,3 @@ powershell -ExecutionPolicy Bypass -File .\build_launcher_exe.ps1
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\build_exe.ps1
 ```
-
