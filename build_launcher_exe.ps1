@@ -1,5 +1,5 @@
 $ErrorActionPreference = "Stop"
-$exeName = "$([char]0x6587)$([char]0x732E)$([char]0x667A)$([char]0x6790)Qwen.exe"
+$exeName = "PaperDigestApiBased.exe"
 
 Add-Type `
   -TypeDefinition (Get-Content -LiteralPath ".\windows_gui_launcher.cs" -Raw) `

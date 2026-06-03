@@ -10,17 +10,17 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
 from .aggregator import aggregate_outputs, load_cards
-from .config import DEFAULT_QWEN_OCR_MODEL, DEFAULT_QWEN_TEXT_MODEL, Settings, load_settings, require_api_key
+from .config import DEFAULT_OCR_MODEL, DEFAULT_TEXT_MODEL, Settings, load_settings, require_api_key
 from .document_reader import supported_files
 from .extractor import extract_paper_card, save_card, validation_error_message
 from .folder_reports import run_folder_reports
 from .ocr import ocr_bad_pages
 from .pdf_parser import bad_page_numbers, detect_bad_extraction, extract_text_with_pymupdf, save_parsed_markdown
-from .qwen_client import QwenClient
+from .api_client import ApiClient
 from .utils import ensure_dir, make_paper_id, write_failed
 
 
-APP_TITLE = "文献智析 Qwen"
+APP_TITLE = "Paper Digest API Based"
 FOLDER_MODE = "资料夹报告（PDF/HTML/TXT/MD）"
 FULL_PAPER_MODE = "论文卡片完整运行"
 PARSE_MODE = "只解析 PDF"
@@ -41,8 +41,8 @@ class PaperDigestGui(tk.Tk):
         self.topic = tk.StringVar()
         self.api_key = tk.StringVar()
         self.base_url = tk.StringVar(value="https://dashscope.aliyuncs.com/compatible-mode/v1")
-        self.text_model = tk.StringVar(value=DEFAULT_QWEN_TEXT_MODEL)
-        self.ocr_model = tk.StringVar(value=DEFAULT_QWEN_OCR_MODEL)
+        self.text_model = tk.StringVar(value=DEFAULT_TEXT_MODEL)
+        self.ocr_model = tk.StringVar(value=DEFAULT_OCR_MODEL)
         self.use_ocr = tk.BooleanVar(value=True)
         self.max_file_mb = tk.DoubleVar(value=50.0)
         self.skip_existing = tk.BooleanVar(value=True)
@@ -64,9 +64,9 @@ class PaperDigestGui(tk.Tk):
     def _load_env_values(self) -> None:
         settings = load_settings()
         self.api_key.set(settings.dashscope_api_key)
-        self.base_url.set(settings.qwen_base_url)
-        self.text_model.set(settings.qwen_text_model)
-        self.ocr_model.set(settings.qwen_ocr_model)
+        self.base_url.set(settings.api_base_url)
+        self.text_model.set(settings.text_model)
+        self.ocr_model.set(settings.ocr_model)
 
     def _build_style(self) -> None:
         self.configure(bg="#f6f7fb")
@@ -145,7 +145,7 @@ class PaperDigestGui(tk.Tk):
         )
 
         ttk.Separator(parent).grid(row=12, column=0, columnspan=3, sticky="ew", pady=16)
-        ttk.Label(parent, text="Qwen API 配置", style="Panel.TLabel", font=("Microsoft YaHei UI", 12, "bold")).grid(
+        ttk.Label(parent, text="API 配置", style="Panel.TLabel", font=("Microsoft YaHei UI", 12, "bold")).grid(
             row=13, column=0, columnspan=3, sticky="w"
         )
         self._entry_row(parent, 14, "API Key", self.api_key, show="*")
@@ -259,10 +259,10 @@ class PaperDigestGui(tk.Tk):
     def _save_env(self) -> None:
         env_text = "\n".join(
             [
-                f"DASHSCOPE_API_KEY={self.api_key.get().strip()}",
-                f"QWEN_BASE_URL={self.base_url.get().strip()}",
-                f"QWEN_TEXT_MODEL={self.text_model.get().strip()}",
-                f"QWEN_OCR_MODEL={self.ocr_model.get().strip()}",
+                f"API_KEY={self.api_key.get().strip()}",
+                f"API_BASE_URL={self.base_url.get().strip()}",
+                f"TEXT_MODEL={self.text_model.get().strip()}",
+                f"OCR_MODEL={self.ocr_model.get().strip()}",
                 "",
             ]
         )
@@ -378,23 +378,23 @@ class PaperDigestGui(tk.Tk):
         except Exception as exc:
             self.events.put(("error", str(exc)))
 
-    def _settings_and_client(self) -> tuple[Settings, QwenClient]:
+    def _settings_and_client(self) -> tuple[Settings, ApiClient]:
         loaded = load_settings(self.project_dir / ".env")
         settings = Settings(
-            dashscope_api_key=self.api_key.get().strip() or loaded.dashscope_api_key,
-            qwen_base_url=self.base_url.get().strip() or loaded.qwen_base_url,
-            qwen_text_model=self.text_model.get().strip() or loaded.qwen_text_model,
-            qwen_ocr_model=self.ocr_model.get().strip() or loaded.qwen_ocr_model,
+            api_key=self.api_key.get().strip() or loaded.api_key,
+            api_base_url=self.base_url.get().strip() or loaded.api_base_url,
+            text_model=self.text_model.get().strip() or loaded.text_model,
+            ocr_model=self.ocr_model.get().strip() or loaded.ocr_model,
             max_paper_chars=loaded.max_paper_chars,
             chunk_chars=loaded.chunk_chars,
             api_timeout_seconds=loaded.api_timeout_seconds,
         )
         require_api_key(settings)
-        client = QwenClient(
-            settings.dashscope_api_key,
-            settings.qwen_base_url,
-            settings.qwen_text_model,
-            settings.qwen_ocr_model,
+        client = ApiClient(
+            settings.api_key,
+            settings.api_base_url,
+            settings.text_model,
+            settings.ocr_model,
             timeout=settings.api_timeout_seconds,
         )
         return settings, client

@@ -8,7 +8,7 @@ from openai import APIError, APITimeoutError, OpenAI
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 
-class QwenClient:
+class ApiClient:
     def __init__(self, api_key: str, base_url: str, text_model: str, ocr_model: str, timeout: float = 300.0):
         self.client = OpenAI(api_key=api_key, base_url=base_url, timeout=timeout)
         self.text_model = text_model

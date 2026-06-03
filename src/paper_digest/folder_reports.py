@@ -7,7 +7,7 @@ from tenacity import retry, stop_after_attempt, wait_fixed
 
 from .config import Settings
 from .document_reader import read_document, supported_files
-from .qwen_client import QwenClient
+from .api_client import ApiClient
 from .schemas import DOCUMENT_REPORT_JSON_SCHEMA, DocumentReport
 from .utils import ensure_dir, slugify, write_failed, write_text
 
@@ -50,7 +50,7 @@ MAX_DOCUMENT_CHARS = 80_000
 
 @retry(stop=stop_after_attempt(3), wait=wait_fixed(2), reraise=True)
 def generate_document_report(
-    client: QwenClient,
+    client: ApiClient,
     path: Path,
     topic: str,
     document_id: str,
@@ -176,7 +176,7 @@ def write_summary_markdown(reports: list[DocumentReport], output_path: Path, top
 
 
 def run_folder_reports(
-    client: QwenClient,
+    client: ApiClient,
     settings: Settings,
     input_dir: Path,
     output_dir: Path,

@@ -1,4 +1,3 @@
-"""Batch literature digestion with local PDF parsing and Qwen analysis."""
+"""Batch literature and document analysis with OpenAI-compatible APIs."""
 
 __version__ = "0.1.0"
-

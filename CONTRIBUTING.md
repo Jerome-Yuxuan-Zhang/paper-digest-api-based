@@ -1,6 +1,6 @@
 # 贡献指南
 
-感谢你愿意改进 `paper-digest-qwen`。
+感谢你愿意改进 `paper-digest-api-based`。
 
 ## 本地开发
 
@@ -29,8 +29,7 @@ source .venv/bin/activate
 
 ```bash
 python -m pytest -q
-rg -n "sk-|DASHSCOPE_API_KEY=.+|OPENAI_API_KEY=.+|QWEN_API_KEY=.+" .
+rg -n "sk-|API_KEY=.+|DASHSCOPE_API_KEY=.+|OPENAI_API_KEY=.+|QWEN_API_KEY=.+" .
 ```
 
 第二条命令用于粗略检查是否误提交密钥。它可能有误报，请人工确认。
-

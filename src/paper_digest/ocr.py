@@ -6,7 +6,7 @@ from pathlib import Path
 
 import fitz
 
-from .qwen_client import QwenClient
+from .api_client import ApiClient
 
 
 OCR_PROMPT = """Extract this PDF page into Markdown.
@@ -34,7 +34,7 @@ def image_to_data_url(image_path: Path) -> str:
     return f"data:image/png;base64,{encoded}"
 
 
-def call_qwen_ocr(client: QwenClient, image_path: Path, prompt: str = OCR_PROMPT) -> str:
+def call_qwen_ocr(client: ApiClient, image_path: Path, prompt: str = OCR_PROMPT) -> str:
     messages = [
         {
             "role": "user",
@@ -47,7 +47,7 @@ def call_qwen_ocr(client: QwenClient, image_path: Path, prompt: str = OCR_PROMPT
     return client.chat_text(messages, model=client.ocr_model, temperature=0.0, max_tokens=4096)
 
 
-def ocr_bad_pages(client: QwenClient, pdf_path: Path, bad_page_numbers: list[int]) -> dict[int, str]:
+def ocr_bad_pages(client: ApiClient, pdf_path: Path, bad_page_numbers: list[int]) -> dict[int, str]:
     results: dict[int, str] = {}
     for page_number in bad_page_numbers:
         image_path = render_pdf_page_to_image(pdf_path, page_number)
@@ -56,4 +56,3 @@ def ocr_bad_pages(client: QwenClient, pdf_path: Path, bad_page_numbers: list[int
         except Exception as exc:
             results[page_number] = f"[OCR_FAILED: {exc}]"
     return results
-

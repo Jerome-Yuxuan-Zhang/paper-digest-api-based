@@ -13,8 +13,8 @@ public static class WindowsGuiLauncher
         if (!File.Exists(launcher))
         {
             System.Windows.Forms.MessageBox.Show(
-                "gui_launcher.py was not found. Please keep this exe in the paper-digest-qwen project root.",
-                "Paper Digest Qwen"
+                "gui_launcher.py was not found. Please keep this exe in the paper-digest-api-based project root.",
+                "Paper Digest API Based"
             );
             return;
         }
@@ -23,7 +23,7 @@ public static class WindowsGuiLauncher
         {
             System.Windows.Forms.MessageBox.Show(
                 "pythonw.exe or python.exe was not found. Please install Python and add it to PATH.",
-                "Paper Digest Qwen"
+                "Paper Digest API Based"
             );
         }
     }

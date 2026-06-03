@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "paper-digest-qwen"
+name = "paper-digest-api-based"
 version = "0.1.0"
-description = "Local batch document and paper analysis with Qwen."
+description = "Local batch document and paper analysis with OpenAI-compatible long-context APIs."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }

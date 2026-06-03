@@ -7,14 +7,17 @@
 支持的变量名：
 
 ```text
-DASHSCOPE_API_KEY
-QWEN_API_KEY
-OPENAI_API_KEY
+API_KEY
+API_BASE_URL
+TEXT_MODEL
+OCR_MODEL
 ```
+
+同时兼容旧变量名 `DASHSCOPE_API_KEY`、`QWEN_API_KEY`、`OPENAI_API_KEY`、`QWEN_BASE_URL`、`QWEN_TEXT_MODEL`、`QWEN_OCR_MODEL`。
 
 ## 文件与隐私
 
-程序会读取用户选择的本地文件，并把文件内容发送给配置的 Qwen OpenAI-compatible API 用于分析。请不要处理你无权上传到第三方 API 的文件。
+程序会读取用户选择的本地文件，并把文件内容发送给配置的 OpenAI-compatible API 用于分析。请不要处理你无权上传到第三方 API 的文件。
 
 程序不会主动上传到 GitHub、云盘或其他服务；但模型 API 调用本身会把被分析文本发送给模型服务商。
 
@@ -25,4 +28,3 @@ OPENAI_API_KEY
 ## 漏洞反馈
 
 如果发现密钥泄露、路径泄露、误上传用户文件等安全问题，请先私下通知维护者，不要在公开 issue 中贴出敏感内容。
-

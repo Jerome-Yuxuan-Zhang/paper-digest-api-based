@@ -4,9 +4,8 @@ python -m PyInstaller `
   --noconfirm `
   --clean `
   --windowed `
-  --name "文献智析Qwen" `
+  --name "PaperDigestApiBased" `
   --paths "src" `
   "gui_launcher.py"
 
-Write-Host "已生成：dist\文献智析Qwen\文献智析Qwen.exe"
-
+Write-Host "已生成：dist\PaperDigestApiBased\PaperDigestApiBased.exe"

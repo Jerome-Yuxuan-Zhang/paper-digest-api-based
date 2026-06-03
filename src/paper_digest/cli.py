@@ -15,21 +15,21 @@ from .extractor import extract_paper_card, save_card, validation_error_message
 from .folder_reports import run_folder_reports
 from .ocr import ocr_bad_pages
 from .pdf_parser import bad_page_numbers, detect_bad_extraction, extract_text_with_pymupdf, save_parsed_markdown
-from .qwen_client import QwenClient
+from .api_client import ApiClient
 from .utils import ensure_dir, make_paper_id, write_failed
 
-app = typer.Typer(help="中文本地资料分析工具：批量读取 PDF、HTML、TXT、MD，并调用 Qwen 生成报告。")
+app = typer.Typer(help="中文本地资料分析工具：批量读取 PDF、HTML、TXT、MD，并调用 OpenAI-compatible API 生成报告。")
 console = Console()
 
 
-def build_client() -> QwenClient:
+def build_client() -> ApiClient:
     settings = load_settings()
     require_api_key(settings)
-    return QwenClient(
-        api_key=settings.dashscope_api_key,
-        base_url=settings.qwen_base_url,
-        text_model=settings.qwen_text_model,
-        ocr_model=settings.qwen_ocr_model,
+    return ApiClient(
+        api_key=settings.api_key,
+        base_url=settings.api_base_url,
+        text_model=settings.text_model,
+        ocr_model=settings.ocr_model,
         timeout=settings.api_timeout_seconds,
     )
 
@@ -72,7 +72,7 @@ def folder(
 def parse(
     input: Path = typer.Option(Path("input_pdfs"), "--input", help="PDF 输入文件夹。"),
     output: Path = typer.Option(Path("outputs/parsed_text"), "--output", help="解析后 Markdown 输出文件夹。"),
-    use_ocr: bool = typer.Option(True, "--ocr/--no-ocr", help="对低质量解析页面启用 Qwen OCR。"),
+    use_ocr: bool = typer.Option(True, "--ocr/--no-ocr", help="对低质量解析页面启用视觉/OCR 模型。"),
 ) -> None:
     ensure_dir(output)
     pdf_paths = sorted(input.glob("*.pdf"))
@@ -138,7 +138,7 @@ def run(
     input: Path = typer.Option(Path("input_pdfs"), "--input", help="PDF 输入文件夹。"),
     output: Path = typer.Option(Path("outputs"), "--output", help="总输出文件夹。"),
     topic: str = typer.Option(..., "--topic", help="你的研究主题。"),
-    use_ocr: bool = typer.Option(True, "--ocr/--no-ocr", help="对低质量解析页面启用 Qwen OCR。"),
+    use_ocr: bool = typer.Option(True, "--ocr/--no-ocr", help="对低质量解析页面启用视觉/OCR 模型。"),
 ) -> None:
     parsed_dir = output / "parsed_text"
     cards_dir = output / "cards_json"

@@ -13,7 +13,7 @@ from .prompts import (
     REDUCE_ANALYSIS_PROMPT,
     paper_prompt,
 )
-from .qwen_client import QwenClient
+from .api_client import ApiClient
 from .schemas import PAPER_CARD_JSON_SCHEMA, PaperCard
 from .utils import write_text
 
@@ -42,7 +42,7 @@ def _validate_card(raw: dict, paper_id: str, file_name: str) -> PaperCard:
 
 @retry(stop=stop_after_attempt(3), wait=wait_fixed(2), reraise=True)
 def _chat_json_and_validate(
-    client: QwenClient,
+    client: ApiClient,
     messages: list[dict],
     paper_id: str,
     file_name: str,
@@ -53,12 +53,12 @@ def _chat_json_and_validate(
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_fixed(2), reraise=True)
-def _chat_json_notes(client: QwenClient, messages: list[dict], max_tokens: int) -> dict:
+def _chat_json_notes(client: ApiClient, messages: list[dict], max_tokens: int) -> dict:
     return client.chat_json(messages, max_tokens=max_tokens)
 
 
 def extract_paper_card(
-    client: QwenClient,
+    client: ApiClient,
     settings: Settings,
     parsed_markdown_path: Path,
     topic: str,
