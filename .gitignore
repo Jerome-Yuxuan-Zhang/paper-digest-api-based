@@ -1,0 +1,50 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Build artifacts
+build/
+dist/
+*.spec
+*.exe
+
+# User inputs and generated outputs
+input_pdfs/*
+!input_pdfs/.gitkeep
+outputs/*
+!outputs/.gitkeep
+!outputs/parsed_text/
+!outputs/parsed_text/.gitkeep
+!outputs/cards_json/
+!outputs/cards_json/.gitkeep
+!outputs/document_reports_json/
+!outputs/document_reports_json/.gitkeep
+!outputs/document_reports_md/
+!outputs/document_reports_md/.gitkeep
+logs/*
+!logs/.gitkeep
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
