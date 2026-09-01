@@ -160,3 +160,27 @@ A single failed file never aborts the whole batch.
 **English**
 
 This project is open source under the [MIT License](LICENSE). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for third-party licenses.
+
+---
+
+## 支持作者 · Support
+
+**中文**
+
+如果这个工具帮到了你，欢迎请作者喝杯咖啡 ☕：
+
+<div align="center">
+  <img src="docs/sponsor/wechat.jpg" alt="微信赞赏" width="220" />
+  &nbsp;&nbsp;
+  <img src="docs/sponsor/alipay.jpg" alt="支付宝" width="220" />
+</div>
+
+**English**
+
+If this tool helps you, consider buying the author a coffee ☕:
+
+<div align="center">
+  <img src="docs/sponsor/wechat.jpg" alt="WeChat Pay" width="220" />
+  &nbsp;&nbsp;
+  <img src="docs/sponsor/alipay.jpg" alt="Alipay" width="220" />
+</div>
