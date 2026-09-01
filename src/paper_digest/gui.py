@@ -473,7 +473,7 @@ class PaperDigestGui(tk.Tk):
     def _parse_pdfs(self) -> None:
         input_dir = Path(self.input_dir.get())
         parsed_dir = ensure_dir(Path(self.output_dir.get()) / "parsed_text")
-        pdf_paths = sorted(input_dir.glob("*.pdf"))
+        pdf_paths = sorted(input_dir.rglob("*.pdf"))
         if not pdf_paths:
             self.events.put(("log", f"在 {input_dir} 中没有找到 PDF 文件。"))
             return

@@ -75,7 +75,7 @@ def parse(
     use_ocr: bool = typer.Option(True, "--ocr/--no-ocr", help="对低质量解析页面启用视觉/OCR 模型。"),
 ) -> None:
     ensure_dir(output)
-    pdf_paths = sorted(input.glob("*.pdf"))
+    pdf_paths = sorted(input.rglob("*.pdf"))
     if not pdf_paths:
         console.print(f"在 {input} 中没有找到 PDF 文件。")
         return
