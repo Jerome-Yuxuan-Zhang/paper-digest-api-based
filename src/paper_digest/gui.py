@@ -46,6 +46,7 @@ class PaperDigestGui(tk.Tk):
         self.use_ocr = tk.BooleanVar(value=True)
         self.max_file_mb = tk.DoubleVar(value=50.0)
         self.skip_existing = tk.BooleanVar(value=True)
+        self.concurrency = tk.IntVar(value=4)
         self.mode = tk.StringVar(value=FOLDER_MODE)
         self.progress_text = tk.StringVar(value="就绪")
         self.progress_value = tk.DoubleVar(value=0)
@@ -53,6 +54,8 @@ class PaperDigestGui(tk.Tk):
         self.file_paths: dict[str, Path] = {}
         self.worker: threading.Thread | None = None
         self.events: queue.Queue[tuple[str, object]] = queue.Queue()
+        self.lane_bars: list[tuple[ttk.Label, ttk.Progressbar]] = []
+        self.lane_frame: ttk.Frame | None = None
 
         self._load_env_values()
         self._build_style()
@@ -63,7 +66,7 @@ class PaperDigestGui(tk.Tk):
 
     def _load_env_values(self) -> None:
         settings = load_settings()
-        self.api_key.set(settings.dashscope_api_key)
+        self.api_key.set(settings.api_key)
         self.base_url.set(settings.api_base_url)
         self.text_model.set(settings.text_model)
         self.ocr_model.set(settings.ocr_model)
@@ -100,9 +103,23 @@ class PaperDigestGui(tk.Tk):
         main.columnconfigure(1, weight=1)
         main.rowconfigure(0, weight=1)
 
-        sidebar = ttk.Frame(main, style="Panel.TFrame", padding=16)
-        sidebar.grid(row=0, column=0, sticky="ns", padx=(0, 14))
+        sidebar_outer = ttk.Frame(main, style="Panel.TFrame")
+        sidebar_outer.grid(row=0, column=0, sticky="nsew", padx=(0, 14))
+        sidebar_outer.columnconfigure(0, weight=1)
+        sidebar_outer.rowconfigure(0, weight=1)
+
+        self.sidebar_canvas = tk.Canvas(sidebar_outer, highlightthickness=0, background="#ffffff", width=450)
+        sidebar_scrollbar = ttk.Scrollbar(sidebar_outer, orient="vertical", command=self.sidebar_canvas.yview)
+        sidebar = ttk.Frame(self.sidebar_canvas, style="Panel.TFrame", padding=16)
         sidebar.columnconfigure(1, weight=1)
+        self.sidebar_canvas.configure(yscrollcommand=sidebar_scrollbar.set)
+        sidebar.bind(
+            "<Configure>",
+            lambda _event: self.sidebar_canvas.configure(scrollregion=self.sidebar_canvas.bbox("all")),
+        )
+        self.sidebar_canvas.create_window((0, 0), window=sidebar, anchor="nw")
+        self.sidebar_canvas.grid(row=0, column=0, sticky="nsew")
+        sidebar_scrollbar.grid(row=0, column=1, sticky="ns")
         self._build_sidebar(sidebar)
 
         notebook = ttk.Notebook(main)
@@ -155,7 +172,7 @@ class PaperDigestGui(tk.Tk):
             16,
             "文本模型",
             self.text_model,
-            ["qwen3.6-plus", "qwen3.5-plus", "qwen-plus-latest", "qwen-max-latest", "qwen-turbo-latest"],
+            ["qwen3.8-flash", "qwen3.6-plus", "qwen3.5-plus", "qwen-plus-latest", "qwen-max-latest", "qwen-turbo-latest"],
         )
         self._combo_row(parent, 17, "OCR 模型", self.ocr_model, ["qwen-vl-ocr-latest"])
         ttk.Button(parent, text="保存 .env 配置", command=self._save_env).grid(row=18, column=0, columnspan=3, sticky="ew", pady=(10, 0))
@@ -171,8 +188,15 @@ class PaperDigestGui(tk.Tk):
             row=23, column=0, columnspan=3, sticky="ew", pady=(8, 0)
         )
 
-        ttk.Label(parent, textvariable=self.progress_text, style="Panel.TLabel").grid(row=24, column=0, columnspan=3, sticky="w", pady=(18, 5))
-        ttk.Progressbar(parent, variable=self.progress_value, maximum=100).grid(row=25, column=0, columnspan=3, sticky="ew")
+        ttk.Label(parent, text="并发路数（2~100）", style="Panel.TLabel").grid(row=24, column=0, sticky="w", pady=(18, 4))
+        ttk.Spinbox(parent, from_=2, to=100, increment=1, textvariable=self.concurrency, width=8).grid(
+            row=24, column=1, columnspan=2, sticky="w", pady=(18, 4)
+        )
+        ttk.Label(parent, textvariable=self.progress_text, style="Panel.TLabel").grid(row=25, column=0, columnspan=3, sticky="w", pady=(10, 5))
+        ttk.Progressbar(parent, variable=self.progress_value, maximum=100).grid(row=26, column=0, columnspan=3, sticky="ew")
+        self.lane_frame = ttk.Frame(parent, style="Panel.TFrame")
+        self.lane_frame.grid(row=27, column=0, columnspan=3, sticky="ew", pady=(10, 0))
+        self.lane_frame.columnconfigure(1, weight=1)
 
     def _path_row(self, parent: ttk.Frame, row: int, label: str, var: tk.StringVar, command) -> None:
         ttk.Label(parent, text=label, style="Panel.TLabel").grid(row=row, column=0, columnspan=3, sticky="w", pady=(8, 4))
@@ -242,7 +266,10 @@ class PaperDigestGui(tk.Tk):
 
     def _build_logs_tab(self) -> None:
         self.log_text = tk.Text(self.logs_tab, wrap="word", font=("Consolas", 10), relief="flat", padx=12, pady=12)
-        self.log_text.pack(fill="both", expand=True)
+        log_scrollbar = ttk.Scrollbar(self.logs_tab, orient="vertical", command=self.log_text.yview)
+        self.log_text.configure(yscrollcommand=log_scrollbar.set)
+        log_scrollbar.pack(side="right", fill="y")
+        self.log_text.pack(side="left", fill="both", expand=True)
 
     def _choose_input(self) -> None:
         selected = filedialog.askdirectory(title="选择资料文件夹")
@@ -410,12 +437,21 @@ class PaperDigestGui(tk.Tk):
             self.events.put(("log", f"在 {input_dir} 中没有找到 pdf/html/txt/md 文件。"))
             return
         max_file_mb = self.max_file_mb.get()
+        try:
+            requested = int(self.concurrency.get())
+        except (TypeError, ValueError):
+            requested = 4
+        concurrency = min(max(requested, 2), len(files))
+        self.events.put(("lanes", concurrency))
 
         def progress(index: int, total: int, path: Path, status: str = "done") -> None:
             self.events.put(("status", f"正在处理：{path.name}"))
             self.events.put(("progress", index / total * 100))
             label = "已跳过" if status == "skipped" else "已存在，跳过" if status == "existing" else "已完成单文件报告"
             self.events.put(("log", f"[{index}/{total}] {label}：{path.name}"))
+
+        def lane_progress(lane: int, path: Path, position: int, lane_total: int) -> None:
+            self.events.put(("lane_progress", (lane, path.name, position, lane_total)))
 
         reports = run_folder_reports(
             client,
@@ -427,6 +463,8 @@ class PaperDigestGui(tk.Tk):
             files=files,
             max_file_mb=None if max_file_mb <= 0 else max_file_mb,
             skip_existing=self.skip_existing.get(),
+            concurrency=concurrency,
+            lane_progress=lane_progress,
         )
         self.events.put(("log", f"已生成 {len(reports)} 个单文件报告。"))
         self.events.put(("log", f"检索 JSON：{output_dir / 'search_index.json'}"))
@@ -497,6 +535,11 @@ class PaperDigestGui(tk.Tk):
                 self.progress_text.set(str(value))
             elif kind == "progress":
                 self.progress_value.set(float(value))
+            elif kind == "lanes":
+                self._setup_lane_bars(int(value))
+            elif kind == "lane_progress":
+                lane, name, position, lane_total = value
+                self._update_lane_bar(lane, name, position, lane_total)
             elif kind == "done":
                 self._log(str(value))
                 self.progress_text.set("完成")
@@ -509,6 +552,27 @@ class PaperDigestGui(tk.Tk):
                 self.run_button.configure(state="normal")
                 messagebox.showerror("任务异常", str(value))
         self.after(150, self._drain_events)
+
+    def _setup_lane_bars(self, count: int) -> None:
+        if self.lane_frame is None:
+            return
+        for label, bar in self.lane_bars:
+            label.destroy()
+            bar.destroy()
+        self.lane_bars.clear()
+        for lane in range(count):
+            label = ttk.Label(self.lane_frame, text=f"第 {lane + 1} 路：等待中", style="Panel.TLabel")
+            bar = ttk.Progressbar(self.lane_frame, maximum=100)
+            label.grid(row=lane, column=0, sticky="w", pady=(2, 0))
+            bar.grid(row=lane, column=1, sticky="ew", padx=(8, 0), pady=(2, 0))
+            self.lane_bars.append((label, bar))
+
+    def _update_lane_bar(self, lane: int, name: str, position: int, lane_total: int) -> None:
+        if lane < 0 or lane >= len(self.lane_bars):
+            return
+        label, bar = self.lane_bars[lane]
+        label.configure(text=f"第 {lane + 1} 路：{name}（{position}/{lane_total}）")
+        bar.configure(value=position / lane_total * 100 if lane_total else 0)
 
     def _log(self, message: str) -> None:
         self.log_text.insert("end", message + "\n")

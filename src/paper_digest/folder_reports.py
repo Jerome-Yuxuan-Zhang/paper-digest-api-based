@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from tenacity import retry, stop_after_attempt, wait_fixed
@@ -175,6 +176,89 @@ def write_summary_markdown(reports: list[DocumentReport], output_path: Path, top
     write_text(output_path, "\n".join(lines))
 
 
+def _process_single_file(
+    client: ApiClient,
+    path: Path,
+    topic: str,
+    document_id: str,
+    output_dir: Path,
+    log_dir: Path,
+    max_file_mb: float | None,
+    skip_existing: bool,
+) -> tuple[str, DocumentReport | None]:
+    existing_report = output_dir / "document_reports_json" / f"{document_id}.json"
+    if skip_existing and existing_report.exists():
+        report = DocumentReport.model_validate_json(existing_report.read_text(encoding="utf-8"))
+        return "existing", report
+    size_mb = path.stat().st_size / 1024 / 1024
+    if max_file_mb is not None and size_mb > max_file_mb:
+        write_failed(log_dir, document_id, path.name, "folder_report", f"文件过大，已跳过：{size_mb:.2f} MB > {max_file_mb:.2f} MB")
+        return "skipped", None
+    try:
+        report = generate_document_report(client, path, topic, document_id)
+        save_individual_report(report, output_dir)
+        return "done", report
+    except Exception as exc:
+        write_failed(log_dir, document_id, path.name, "folder_report", str(exc))
+        return "failed", None
+
+
+def _run_sequential(
+    client: ApiClient,
+    tasks: list[tuple[int, Path, str]],
+    topic: str,
+    output_dir: Path,
+    log_dir: Path,
+    max_file_mb: float | None,
+    skip_existing: bool,
+    progress,
+) -> dict[int, DocumentReport]:
+    reports_by_index: dict[int, DocumentReport] = {}
+    total = len(tasks)
+    for index, path, document_id in tasks:
+        status, report = _process_single_file(client, path, topic, document_id, output_dir, log_dir, max_file_mb, skip_existing)
+        if report is not None:
+            reports_by_index[index] = report
+        if progress:
+            progress(index, total, path, status if status in {"existing", "skipped"} else "done")
+    return reports_by_index
+
+
+def _run_concurrent(
+    client: ApiClient,
+    tasks: list[tuple[int, Path, str]],
+    topic: str,
+    output_dir: Path,
+    log_dir: Path,
+    max_file_mb: float | None,
+    skip_existing: bool,
+    concurrency: int,
+    progress,
+    lane_progress,
+) -> dict[int, DocumentReport]:
+    lanes: list[list[tuple[int, Path, str]]] = [[] for _ in range(concurrency)]
+    for lane_index, task in enumerate(tasks):
+        lanes[lane_index % concurrency].append(task)
+
+    def run_lane(lane_index: int, lane_tasks: list[tuple[int, Path, str]]) -> dict[int, DocumentReport]:
+        lane_reports: dict[int, DocumentReport] = {}
+        for position, (index, path, document_id) in enumerate(lane_tasks, start=1):
+            if lane_progress:
+                lane_progress(lane_index, path, position, len(lane_tasks))
+            status, report = _process_single_file(client, path, topic, document_id, output_dir, log_dir, max_file_mb, skip_existing)
+            if report is not None:
+                lane_reports[index] = report
+            if progress:
+                progress(index, len(tasks), path, status if status in {"existing", "skipped"} else "done")
+        return lane_reports
+
+    reports_by_index: dict[int, DocumentReport] = {}
+    with ThreadPoolExecutor(max_workers=concurrency) as pool:
+        for lane_result in pool.map(lambda idx: run_lane(idx, lanes[idx]), range(concurrency)):
+            reports_by_index.update(lane_result)
+    return reports_by_index
+
+
 def run_folder_reports(
     client: ApiClient,
     settings: Settings,
@@ -186,33 +270,29 @@ def run_folder_reports(
     files: list[Path] | None = None,
     max_file_mb: float | None = 50.0,
     skip_existing: bool = True,
+    concurrency: int = 1,
+    lane_progress=None,
 ) -> list[DocumentReport]:
     del settings
     ensure_dir(output_dir)
     files = files if files is not None else supported_files(input_dir)
-    reports: list[DocumentReport] = []
-    for index, path in enumerate(files, start=1):
-        document_id = document_id_for(index, path)
-        existing_report = output_dir / "document_reports_json" / f"{document_id}.json"
-        if skip_existing and existing_report.exists():
-            reports.append(DocumentReport.model_validate_json(existing_report.read_text(encoding="utf-8")))
-            if progress:
-                progress(index, len(files), path, "existing")
-            continue
-        try:
-            size_mb = path.stat().st_size / 1024 / 1024
-            if max_file_mb is not None and size_mb > max_file_mb:
-                write_failed(log_dir, document_id, path.name, "folder_report", f"文件过大，已跳过：{size_mb:.2f} MB > {max_file_mb:.2f} MB")
-                if progress:
-                    progress(index, len(files), path, "skipped")
-                continue
-            report = generate_document_report(client, path, topic, document_id)
-            save_individual_report(report, output_dir)
-            reports.append(report)
-        except Exception as exc:
-            write_failed(log_dir, document_id, path.name, "folder_report", str(exc))
-        if progress:
-            progress(index, len(files), path, "done")
+    total = len(files)
+    if total == 0:
+        write_search_json([], output_dir / "search_index.json")
+        write_summary_markdown([], output_dir / "folder_summary.md", topic)
+        return []
+
+    concurrency = max(1, min(int(concurrency), total))
+    tasks = [(index, path, document_id_for(index, path)) for index, path in enumerate(files, start=1)]
+
+    if concurrency == 1:
+        reports_by_index = _run_sequential(client, tasks, topic, output_dir, log_dir, max_file_mb, skip_existing, progress)
+    else:
+        reports_by_index = _run_concurrent(
+            client, tasks, topic, output_dir, log_dir, max_file_mb, skip_existing, concurrency, progress, lane_progress
+        )
+
+    reports = [reports_by_index[index] for index in sorted(reports_by_index)]
     write_search_json(reports, output_dir / "search_index.json")
     write_summary_markdown(reports, output_dir / "folder_summary.md", topic)
     return reports
