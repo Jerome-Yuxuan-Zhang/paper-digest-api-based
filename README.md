@@ -39,7 +39,7 @@ source .venv/bin/activate
 ```env
 API_KEY=你的key
 API_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-TEXT_MODEL=qwen3.6-plus
+TEXT_MODEL=qwen3.8-flash
 OCR_MODEL=qwen-vl-ocr-latest
 ```
 
@@ -50,7 +50,7 @@ DASHSCOPE_API_KEY=你的key
 QWEN_API_KEY=你的key
 OPENAI_API_KEY=你的key
 QWEN_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-QWEN_TEXT_MODEL=qwen3.6-plus
+QWEN_TEXT_MODEL=qwen3.8-flash
 QWEN_OCR_MODEL=qwen-vl-ocr-latest
 ```
 
@@ -62,7 +62,7 @@ QWEN_OCR_MODEL=qwen-vl-ocr-latest
 
 推荐模型：
 
-- `qwen3.6-plus`：推荐作为首选文本模型；如果你的账号或区域暂未开放该模型，可以改用 `qwen3.5-plus` 或 `qwen-plus-latest`。
+- `qwen3.8-flash`：推荐作为首选文本模型；如果你的账号或区域暂未开放该模型，可以改用 `qwen3.6-plus`、`qwen3.5-plus` 或 `qwen-plus-latest`。
 - `qwen-vl-ocr-latest`：推荐作为 OCR 模型。
 
 注册和配置步骤：
@@ -80,7 +80,7 @@ QWEN_OCR_MODEL=qwen-vl-ocr-latest
 ```env
 API_KEY=你的DashScope_API_Key
 API_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-TEXT_MODEL=qwen3.6-plus
+TEXT_MODEL=qwen3.8-flash
 OCR_MODEL=qwen-vl-ocr-latest
 ```
 
@@ -230,18 +230,25 @@ logs/failed_papers.csv
 - 如果 PDF 都是可选中文本，可以关闭 OCR。
 - 重跑前先查看 `logs/failed_papers.csv`。
 
-## Windows exe 入口
+## Windows exe 入口（免依赖 release）
 
-仓库不提交 exe。你可以本地生成一个轻量启动器：
+仓库不提交 exe。你可以本地打包一个**单文件、免依赖**的 exe，拷贝到其它 Windows 电脑双击即可运行，目标电脑无需安装 Python 或任何依赖：
+
+```powershell
+pip install pyinstaller
+powershell -ExecutionPolicy Bypass -File .\build_exe.ps1
+```
+
+生成的 `dist\PaperDigestApiBased.exe` 已内置 Python 运行时与全部依赖（约 80 MB），首次双击会稍作解压，之后即可正常使用。
+
+如果你只是想在本机开发时快速启动，也可以用轻量启动器（仍需要本机安装 Python）：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\build_launcher_exe.ps1
 ```
 
-生成的 `PaperDigestApiBased.exe` 需要本机已有 Python 环境。
+## 许可证
 
-完整 PyInstaller 打包：
+本项目以 MIT 许可证开源（见 `LICENSE`）。
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\build_exe.ps1
-```
+第三方依赖的许可证清单见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)。其中 `PyMuPDF` 采用 AGPL-3.0 或 Artifex 商业授权（双许可）；若要进行闭源商业分发，请先处理该组件的授权。
