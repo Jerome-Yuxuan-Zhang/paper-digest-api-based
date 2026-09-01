@@ -1,254 +1,162 @@
 # paper-digest-api-based
 
-`paper-digest-api-based` 是一个本地运行的资料夹批量分析工具。它可以读取一个文件夹中的 PDF、HTML、TXT、MD 文件，并且每个文件都会使用单独的 API 上下文生成一份独立报告，避免把所有资料塞进同一个 context window。
+> 本地批量资料分析工具 · Local batch document analysis tool
 
-项目目标是接入**任意高性能、长上下文、OpenAI-compatible API**。默认配置以 DashScope/Qwen 为示例，但你可以改成其他兼容 OpenAI Chat Completions API 的模型服务。
+`paper-digest-api-based` 是一个在本地运行的资料夹批量分析工具。它读取一个文件夹里的 **PDF / HTML / TXT / MD** 文件，为每个文件单独调用一次 API 生成独立报告，最后自动汇总成便于检索和阅读的总文件。
 
-全部文件处理完成后，程序会自动生成两个核心总文件：
+`paper-digest-api-based` is a local batch document analysis tool. It reads **PDF / HTML / TXT / MD** files in a folder, calls the API separately for each file to produce an independent report, then aggregates everything into searchable, readable summary files.
 
-- `outputs/search_index.json`：方便检索、二次处理和程序读取的结构化 JSON。
-- `outputs/folder_summary.md`：方便人工阅读、复制给 AI 或继续写作的 Markdown 总结。
+---
 
-项目也保留论文卡片流程：PDF 解析、文献卡片、Excel 文献矩阵、证据库和综述提示词。
+## 它能做什么 · What it does
 
-## 安装
+**中文**
 
-需要 Python 3.11 或更高版本。
+- 批量分析一个文件夹里的 PDF / HTML / TXT / MD 文件。
+- 每个文件使用独立的 API 上下文，避免把所有资料塞进同一个上下文窗口。
+- 自动生成两个总文件：`search_index.json`（结构化检索索引）与 `folder_summary.md`（Markdown 总结）。
+- 提供中文图形界面（GUI），并保留论文卡片流程（PDF 解析、文献卡片、Excel 文献矩阵、证据库）。
+- 支持 2~100 路并发分析，每路独立进度条，文件少于路数时自动调节。
+
+**English**
+
+- Batch-analyze PDF / HTML / TXT / MD files in a folder.
+- Each file runs in its own API context, so materials are never crammed into a single context window.
+- Auto-generates two summary files: `search_index.json` (structured search index) and `folder_summary.md` (Markdown summary).
+- Ships a Chinese GUI, plus a paper-card pipeline (PDF parsing, literature cards, Excel matrix, evidence bank).
+- Supports 2–100 concurrent lanes, each with its own progress bar, auto-adjusted when there are fewer files than lanes.
+
+---
+
+## 快速开始 · Quick Start
+
+### 方式一：免安装版（推荐）· Option 1: Portable EXE (recommended)
+
+**中文**
+
+1. 从 [Releases](https://github.com/Jerome-Yuxuan-Zhang/paper-digest-api-based/releases) 页面下载最新的 `PaperDigestApiBased.exe`。
+2. 把 `PaperDigestApiBased.exe` 放到一个**单独的文件夹**里（程序会在旁边自动创建 `input_pdfs`、`outputs`、`logs` 等目录）。
+3. 双击运行。首次启动会稍作解压，请耐心等待。
+4. 在左侧「API 配置」填入 API Key，然后把要分析的文件放进 `input_pdfs` 文件夹。
+5. 点击「开始运行」。
+
+**English**
+
+1. Download the latest `PaperDigestApiBased.exe` from the [Releases](https://github.com/Jerome-Yuxuan-Zhang/paper-digest-api-based/releases) page.
+2. Put the exe into its **own folder** (the program auto-creates `input_pdfs`, `outputs`, `logs`, etc. next to it).
+3. Double-click to run. The first launch unpacks for a while — please be patient.
+4. Enter your API Key under "API 配置" (API configuration), then drop your files into the `input_pdfs` folder.
+5. Click "开始运行" (Start).
+
+> 提示：若 Windows SmartScreen 弹出「Windows 已保护你的电脑」，点「更多信息」→「仍要运行」。
+> Tip: If Windows SmartScreen says "Windows protected your PC", click "More info" → "Run anyway".
+
+### 方式二：从源码运行（需要 Python 3.11+）· Option 2: Run from source (Python 3.11+ required)
 
 ```bash
-git clone https://github.com/Jerome-Yuxuan-Zhang/paper-digest-api-based.git
-cd paper-digest-api-based
-python -m venv .venv
-.venv\Scripts\activate
 pip install -r requirements.txt
-pip install -e .
-```
-
-macOS 或 Linux 激活虚拟环境：
-
-```bash
-source .venv/bin/activate
-```
-
-## 配置 API
-
-如果你已经把 API Key 注入系统环境变量，可以不创建 `.env`。程序会优先读取系统环境变量。
-
-推荐变量名：
-
-```env
-API_KEY=你的key
-API_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-TEXT_MODEL=qwen3.8-flash
-OCR_MODEL=qwen-vl-ocr-latest
-```
-
-兼容旧变量名：
-
-```env
-DASHSCOPE_API_KEY=你的key
-QWEN_API_KEY=你的key
-OPENAI_API_KEY=你的key
-QWEN_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-QWEN_TEXT_MODEL=qwen3.8-flash
-QWEN_OCR_MODEL=qwen-vl-ocr-latest
-```
-
-不要把 API Key 写死进代码。模型名称和 `base_url` 会从系统环境变量、`.env` 或 GUI 当前输入读取。
-
-## 推荐使用 Qwen API
-
-本项目默认推荐使用 Qwen / DashScope，因为它提供 OpenAI-compatible 接口、中文能力强，并且有适合长文档分析的模型。
-
-推荐模型：
-
-- `qwen3.8-flash`：推荐作为首选文本模型；如果你的账号或区域暂未开放该模型，可以改用 `qwen3.6-plus`、`qwen3.5-plus` 或 `qwen-plus-latest`。
-- `qwen-vl-ocr-latest`：推荐作为 OCR 模型。
-
-注册和配置步骤：
-
-1. 打开阿里云百炼 / DashScope 控制台。
-2. 登录或注册阿里云账号。
-3. 开通模型服务，并确认账号有可用额度或计费方式。
-4. 在 API Key 管理页面创建 API Key。
-5. 把 API Key 写入系统环境变量，或复制 `.env.example` 为 `.env` 后填写。
-6. 保持 `API_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1`。
-7. 在 GUI 中点击“重新读取系统环境变量”，或重新启动程序。
-
-示例 `.env`：
-
-```env
-API_KEY=你的DashScope_API_Key
-API_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-TEXT_MODEL=qwen3.8-flash
-OCR_MODEL=qwen-vl-ocr-latest
-```
-
-如果你使用海外站点或国际版 Qwen Cloud，请按照对应控制台给出的 OpenAI-compatible endpoint 修改 `API_BASE_URL`。
-
-你可以换成任何兼容 OpenAI Chat Completions API 的长上下文模型。
-
-## 中文 GUI
-
-启动中文桌面界面：
-
-```bash
 python -m paper_digest.gui
 ```
 
-或安装后运行：
+> 命令行用法与开发/打包说明见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+> See [CONTRIBUTING.md](CONTRIBUTING.md) for CLI usage and development/packaging instructions.
 
-```bash
-paper-digest-gui
-```
+---
 
-GUI 支持：
+## 配置 API · API Configuration
 
-- 资料文件夹、输出文件夹、分析主题、运行模式、OCR 开关。
-- API 配置：默认读取系统环境变量，也可以手动保存到 `.env`。
-- 文件队列：显示 PDF、HTML、TXT、MD 的文件名、类型、大小和路径。
-- 运行控制：资料夹报告、论文卡片完整运行、只解析 PDF、只生成论文卡片、只汇总论文卡片。
-- 文件勾选：全选、全不选、反选，双击某行切换处理状态。
-- 跳过大文件：默认跳过超过 50 MB 的文件。
-- 断点续跑：默认跳过已经存在的单文件报告。
-- 实时进度与中文日志。
-- 报告预览和输出文件快捷打开。
+**中文**
 
-默认模式是：
+本项目默认推荐 **Qwen / DashScope**（OpenAI-compatible，中文能力强，适合长文档），也兼容任何 OpenAI Chat Completions API 的长上下文模型。在 GUI 左侧「API 配置」中填写：
 
-```text
-资料夹报告（PDF/HTML/TXT/MD）
-```
+| 项目 | 值 |
+|------|-----|
+| API Key | 你的 DashScope / Qwen API Key |
+| Base URL | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
+| 文本模型 | `qwen3.8-flash`（默认） |
+| OCR 模型 | `qwen-vl-ocr-latest` |
 
-## 命令行运行
+- 可点「保存 .env 配置」把配置存到本地，下次启动自动读取；也可点「重新读取系统环境变量」读取系统环境变量。
+- 若你的账号暂未开放 `qwen3.8-flash`，可改用 `qwen3.6-plus`、`qwen3.5-plus` 或 `qwen-plus-latest`。
 
-资料夹报告流程：
+**English**
 
-```bash
-python -m paper_digest.cli folder --input input_pdfs --output outputs --topic "你的分析主题"
-```
+This project defaults to **Qwen / DashScope** (OpenAI-compatible, strong Chinese, long-document friendly). Any long-context model compatible with the OpenAI Chat Completions API also works. Fill in the left "API 配置" (API configuration) panel:
 
-支持格式：
+| Item | Value |
+|------|-------|
+| API Key | Your DashScope / Qwen API Key |
+| Base URL | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
+| Text model | `qwen3.8-flash` (default) |
+| OCR model | `qwen-vl-ocr-latest` |
 
-```text
-pdf, html, htm, txt, md
-```
+- Click "保存 .env 配置" (Save .env) to persist the config locally; or click "重新读取系统环境变量" (Reload env) to read from system environment variables.
+- If `qwen3.8-flash` is not available for your account, use `qwen3.6-plus`, `qwen3.5-plus`, or `qwen-plus-latest` instead.
 
-跳过超大文件：
+---
 
-```bash
-python -m paper_digest.cli folder --input input_pdfs --output outputs --max-file-mb 50
-```
+## 输出文件 · Output Files
 
-强制重跑已有报告：
+**中文**
 
-```bash
-python -m paper_digest.cli folder --input input_pdfs --output outputs --rerun-existing
-```
+| 文件 / 文件夹 | 说明 |
+|---------------|------|
+| `outputs/search_index.json` | 所有报告汇总后的结构化检索索引 |
+| `outputs/folder_summary.md` | 所有报告汇总后的 Markdown 总结 |
+| `outputs/document_reports_json/` | 每个文件的独立 JSON 报告 |
+| `outputs/document_reports_md/` | 每个文件的独立 Markdown 报告 |
+| `outputs/parsed_text/` | 每篇论文的解析文本（保留页码） |
+| `outputs/cards_json/` | 每篇论文的结构化文献卡片 |
+| `outputs/literature_matrix.xlsx` | 文献矩阵（Excel） |
+| `logs/failed_papers.csv` | 失败记录 |
 
-单文件报告会保存到：
+单个文件失败不会中断整个批处理。
 
-```text
-outputs/document_reports_json/
-outputs/document_reports_md/
-```
+**English**
 
-最终两个总文件：
+| File / Folder | Description |
+|---------------|-------------|
+| `outputs/search_index.json` | Structured search index of all reports |
+| `outputs/folder_summary.md` | Markdown summary of all reports |
+| `outputs/document_reports_json/` | One independent JSON report per file |
+| `outputs/document_reports_md/` | One independent Markdown report per file |
+| `outputs/parsed_text/` | Parsed text per paper (page numbers preserved) |
+| `outputs/cards_json/` | One structured literature card per paper |
+| `outputs/literature_matrix.xlsx` | Literature matrix (Excel) |
+| `logs/failed_papers.csv` | Failure log |
 
-```text
-outputs/search_index.json
-outputs/folder_summary.md
-```
+A single failed file never aborts the whole batch.
 
-论文卡片完整流程：
+---
 
-```bash
-python -m paper_digest.cli run --input input_pdfs --output outputs --topic "你的研究主题"
-```
+## 使用建议 · Tips
 
-只解析 PDF：
+**中文**
 
-```bash
-python -m paper_digest.cli parse --input input_pdfs --output outputs/parsed_text
-```
+- 先拿少量文件试跑，确认配置正常。
+- 文件较多时可调大「并发路数（2~100）」提速。
+- 默认会跳过超过 50 MB 的文件，避免超大文件卡住批处理。
+- 默认启用「跳过已有报告（断点续跑）」，中断后重开可接着跑。
+- 若 PDF 都是可选中文本，可关闭 OCR 以降低成本。
+- 可通过环境变量 `API_TIMEOUT_SECONDS` 控制单次 API 等待时间。
 
-只从解析文本生成 JSON 卡片：
+**English**
 
-```bash
-python -m paper_digest.cli extract --parsed outputs/parsed_text --output outputs/cards_json --topic "你的研究主题"
-```
+- Try a few files first to confirm the setup works.
+- Raise "并发路数" (concurrency, 2–100) to speed things up with many files.
+- Files over 50 MB are skipped by default to avoid stalling the batch.
+- "跳过已有报告" (skip existing / resume) is on by default, so you can resume after interruption.
+- If your PDFs have selectable text, turn OCR off to cut cost.
+- Use the `API_TIMEOUT_SECONDS` env var to control the per-call API timeout.
 
-只汇总现有卡片：
+---
 
-```bash
-python -m paper_digest.cli aggregate --cards outputs/cards_json --output outputs --topic "你的研究主题"
-```
+## 许可证 · License
 
-清理生成文件，但不删除输入文件：
+**中文**
 
-```bash
-python -m paper_digest.cli clean
-```
+本项目以 [MIT 许可证](LICENSE) 开源。第三方组件许可证清单见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
-## 输出文件
+**English**
 
-`outputs/document_reports_json/`
-: 每个输入文件一个独立 JSON 报告。每个报告来自一次单独 API 上下文。
-
-`outputs/document_reports_md/`
-: 每个输入文件一个独立 Markdown 报告。
-
-`outputs/search_index.json`
-: 所有单文件报告汇总后的检索 JSON，适合搜索、筛选、二次程序处理。
-
-`outputs/folder_summary.md`
-: 所有单文件报告汇总后的 Markdown 总结，适合阅读、复制给 AI、继续写作。
-
-`outputs/parsed_text/`
-: 每篇论文一个 Markdown 文件，保留 `## Page 1` 这样的页码标题，方便后续证据定位。
-
-`outputs/cards_json/{paper_id}.json`
-: 每篇论文一个通过 Pydantic 校验的结构化文献卡片。
-
-`outputs/literature_matrix.xlsx`
-: 文献矩阵，便于横向比较。
-
-失败记录写入：
-
-```text
-logs/failed_papers.csv
-```
-
-某一篇文件失败不会中断整个批处理。
-
-## 控制成本和卡顿
-
-- 先少量文件试跑。
-- GUI 中可设置“跳过超过 MB”，默认跳过超过 50 MB 的文件，避免完整教材或超大报告卡住批处理。
-- GUI 默认启用“跳过已有报告（断点续跑）”，中断后重开可以继续跑后面的文件。
-- 通过 `API_TIMEOUT_SECONDS=300` 控制单次 API 调用等待时间。
-- 如果 PDF 都是可选中文本，可以关闭 OCR。
-- 重跑前先查看 `logs/failed_papers.csv`。
-
-## Windows exe 入口（免依赖 release）
-
-仓库不提交 exe。你可以本地打包一个**单文件、免依赖**的 exe，拷贝到其它 Windows 电脑双击即可运行，目标电脑无需安装 Python 或任何依赖：
-
-```powershell
-pip install pyinstaller
-powershell -ExecutionPolicy Bypass -File .\build_exe.ps1
-```
-
-生成的 `dist\PaperDigestApiBased.exe` 已内置 Python 运行时与全部依赖（约 80 MB），首次双击会稍作解压，之后即可正常使用。
-
-如果你只是想在本机开发时快速启动，也可以用轻量启动器（仍需要本机安装 Python）：
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\build_launcher_exe.ps1
-```
-
-## 许可证
-
-本项目以 MIT 许可证开源（见 `LICENSE`）。
-
-第三方依赖的许可证清单见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)。其中 `PyMuPDF` 采用 AGPL-3.0 或 Artifex 商业授权（双许可）；若要进行闭源商业分发，请先处理该组件的授权。
+This project is open source under the [MIT License](LICENSE). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for third-party licenses.
