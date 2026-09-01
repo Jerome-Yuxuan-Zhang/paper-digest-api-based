@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "paper-digest-api-based"
-version = "0.1.0"
+version = "0.2.0"
 description = "Local batch document and paper analysis with OpenAI-compatible long-context APIs."
 readme = "README.md"
 requires-python = ">=3.11"
